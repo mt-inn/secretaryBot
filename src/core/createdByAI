@@ -1,0 +1,147 @@
+import datetime
+import time
+import threading
+from dateutil.relativedelta import relativedelta
+import calendar
+
+
+class Reminder:
+    def __init__(self):
+        self.schedule = {}
+
+    def _generate_key(self, name, date_time):
+        return f"{name}_{int(date_time.timestamp())}"
+
+    def add_event(self, name, date_time, location=None, items=None, repeat=None, message=None):
+        """
+        repeat: None / 'daily' / 'weekly' / 'monthly' / 'yearly'
+        """
+        key = self._generate_key(name, date_time)
+        self.schedule[key] = {
+            "name": name,
+            "date_time": date_time,
+            "location": location,
+            "items": items,
+            "repeat": repeat,
+            "message": message
+        }
+
+    def delete_event(self, name=None, date=None):
+        to_delete = []
+        for key, event in self.schedule.items():
+            if (name is None or event["name"] == name) and (date is None or event["date_time"].date() == date):
+                to_delete.append(key)
+        for key in to_delete:
+            del self.schedule[key]
+        return len(to_delete)
+
+    def update_event(self, old_name, old_date, new_event_data):
+        for key, event in list(self.schedule.items()):
+            if event["name"] == old_name and event["date_time"].date() == old_date:
+                del self.schedule[key]
+                self.add_event(**new_event_data)
+                return True
+        return False
+
+    def list_events(self, date=None):
+        result = []
+        for event in sorted(self.schedule.values(), key=lambda e: e["date_time"]):
+            if date is None or event["date_time"].date() == date:
+                result.append(event)
+        return result
+
+    def display_events(self, date=None):
+        events = self.list_events(date)
+        if not events:
+            print("予定はありません。")
+            return
+        for e in events:
+            print(f"\n📅 {e['name']} - {e['date_time'].strftime('%Y-%m-%d %H:%M')}")
+            if e['location']:
+                print(f"  - 場所: {e['location']}")
+            if e['items']:
+                print(f"  - 持ち物: {e['items']}")
+            if e['repeat']:
+                print(f"  - 繰り返し: {e['repeat']}")
+            if e['message']:
+                print(f"  - メッセージ: {e['message']}")
+
+    def _remind(self, event):
+        print(f"\n🔔 リマインド: {event['name']}")
+        if event['message']:
+            print(f"  {event['message']}")
+        else:
+            print(f"  - 時間: {event['date_time']}")
+            if event['location']:
+                print(f"  - 場所: {event['location']}")
+            if event['items']:
+                print(f"  - 持ち物: {event['items']}")
+
+    def _reschedule(self, key, event):
+        repeat = event["repeat"]
+        dt = event["date_time"]
+
+        if repeat == "daily":
+            new_dt = dt + datetime.timedelta(days=1)
+        elif repeat == "weekly":
+            new_dt = dt + datetime.timedelta(weeks=1)
+        elif repeat == "monthly":
+            new_dt = dt + relativedelta(months=1)
+        elif repeat == "yearly":
+            new_dt = dt + relativedelta(years=1)
+        else:
+            return
+
+        new_key = self._generate_key(event["name"], new_dt)
+        event["date_time"] = new_dt
+        self.schedule[new_key] = event
+        del self.schedule[key]
+
+    def start_reminder_loop(self):
+        def loop():
+            while True:
+                now = datetime.datetime.now()
+                for key, event in list(self.schedule.items()):
+                    if abs((event["date_time"] - now).total_seconds()) < 1:
+                        self._remind(event)
+                        if event["repeat"]:
+                            self._reschedule(key, event)
+                        else:
+                            del self.schedule[key]
+                time.sleep(1)
+
+        threading.Thread(target=loop, daemon=True).start()
+
+    def remind_after(self, name, delay_amount, delay_unit="seconds", location=None, items=None, message=None):
+        unit_map = {
+            "seconds": "seconds",
+            "minutes": "minutes",
+            "hours": "hours",
+            "days": "days",
+            "weeks": "weeks"
+        }
+        if delay_unit not in unit_map:
+            raise ValueError("無効な時間単位です")
+        delta = datetime.timedelta(**{unit_map[delay_unit]: delay_amount})
+        remind_time = datetime.datetime.now() + delta
+        self.add_event(name=name, date_time=remind_time, location=location, items=items, message=message)
+
+#ここから使用例
+
+if __name__ == "__main__":
+    r = Reminder()
+    r.start_reminder_loop()
+
+    # 10秒後の予定
+    dt = datetime.datetime.now() + datetime.timedelta(seconds=10)
+    r.add_event("会議", dt, location="会議室A", items="資料", repeat="daily")
+
+    # 15秒後にカスタムメッセージ付きでリマインド
+    r.remind_after("水分補給", 15, "seconds", message="水を飲んでリフレッシュしましょう")
+
+    # 予定一覧表示
+    r.display_events()
+
+    print("リマインダーを起動中...")
+    while True:
+        time.sleep(60)
