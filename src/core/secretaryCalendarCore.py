@@ -13,7 +13,7 @@ class Reminder:
         # 各予定を一意に識別するためのキーを生成
         return f"{name}_{int(date_time.timestamp())}"
 
-    def add_event(self, name, date_time, location=None, items=None, repeat=None, message=None):
+    def add_event(self, name, date_time, location=None, items=None, repeat=None, message=None, user=None):
         """
         新しい予定を追加します。
 
@@ -22,8 +22,9 @@ class Reminder:
             date_time (datetime): 実行時刻
             location (str): 場所
             items (str): 持ち物など
-            repeat (str): 繰り返し（'daily', 'weekly', 'monthly', 'yearly'）
+            repeat (str): 繰り返し（'daily', 'weekly', 'monthly', 'yearly')
             message (str): カスタムリマインドメッセージ
+            user (str): メンションする相手
 
         例:
             dt = datetime.datetime(2025, 5, 1, 9, 0)
@@ -36,7 +37,8 @@ class Reminder:
             "location": location,
             "items": items,
             "repeat": repeat,
-            "message": message
+            "message": message,
+            "user": user
         }
 
     def delete_event(self, name=None, date=None):
@@ -135,7 +137,7 @@ class Reminder:
 
     def _remind(self, event):
         # リマインドの実行内容（カスタムメッセージ優先）
-        print(f"\n🔔 リマインド: {event['name']}")
+        print(f"\n@{event['user']}\n🔔 リマインド: {event['name']}")
         if event['message']:
             print(f"  {event['message']}")
         else:
@@ -210,23 +212,3 @@ class Reminder:
         remind_time = datetime.datetime.now() + delta
         self.add_event(name=name, date_time=remind_time, location=location, items=items, message=message)
 
-
-#ここから使用例
-
-if __name__ == "__main__":
-    r = Reminder()
-    r.start_reminder_loop()
-
-    # 10秒後の予定
-    dt = datetime.datetime.now() + datetime.timedelta(seconds=10)
-    r.add_event("会議", dt, location="会議室A", items="資料", repeat="daily")
-
-    # 15秒後にカスタムメッセージ付きでリマインド
-    r.remind_after("水分補給", 15, "seconds", message="水を飲んでリフレッシュしましょう")
-
-    # 予定一覧表示
-    r.display_events()
-
-    print("リマインダーを起動中...")
-    while True:
-        time.sleep(60)
