@@ -1,0 +1,2 @@
+    embed = discord.Embed(title="タイトル", color=discord.Colour.keyword())
+    embed.add_field(name="太字", value="内容", inline=False)
