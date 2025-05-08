@@ -10,18 +10,16 @@ import datetime
 from dotenv import load_dotenv
 from core import secretaryCalendarCore as scc
 from core import secretaryReactCore as src
+import tracemalloc
 
+tracemalloc.start()
 load_dotenv()
 TOKEN=os.getenv("DISCORD_TOKEN")
 
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
-
 rem = scc.Reminder()
 rem.start_reminder_loop()
+client = rem.client
+tree = app_commands.CommandTree(client)
 
 def str2dt(text:str):
     """
@@ -41,28 +39,35 @@ def str2dt(text:str):
     dt = datetime.datetime(*l)
     return dt
 
+class SelectView(View):
+    @discord.ui.select(
+        cls=Select,
+        placeholder="",
+        options=[discord.SelectOption(label="このチャンネル",value='ch',description="このチャンネルでリマインド"),discord.SelectOption(label="DM",value='dm',description="DMでリマインド"
+    )]
+    )
+    async def selectMenu(self, ctx: discord.Interaction, select: Select):
+        await ctx.response.send_message("送信先を決定しました。")
+        if select.values[0] == 'ch':
+            await rem.configAddres(type="ch",addres=ctx.channel_id)
+        else:
+            await rem.configAddres(type="dm", addres=ctx.user.id)
 @tree.command(name="test",description="テストコマンドです。")
 @app_commands.describe(
     text="Text to say hello." # 引数名=説明
 )
 async def test_command(ctx: discord.Interaction, text:str):
     await ctx.response.send_message(f"てすと！\nprovided word: {text}",ephemeral=True)#ephemeral=True→「これらはあなただけに表示されています」
+@tree.command(name="displayconfig",description="設定を見せる")
+async def command_displayconfig(ctx: discord.Interaction):
+    await ctx.channel.send(f"{rem.schedule}\n\n{rem.addres}")
+    return
 #ここからbotのメイン機能たち
 @tree.command(name="config", description="botの設定をします。")
 async def command_config(ctx: discord.Interaction):
-    select = Select(placeholder="リマインドをどこに送るか選ぶ")
-    select.add_option(
-        label="このチャンネル",
-        value="ch",
-        description="このチャンネルでリマインド")
-    select.add_option(
-        label="DM",
-        value="dm",
-        description="DMでリマインド"
-    )
-    view = View()
-    view.add_item(select)
+    view = SelectView()
     await ctx.response.send_message("リマインドの送信場所を設定", view=view)
+    
 @tree.command(name="add_event",description="用事を登録します。")
 @app_commands.describe(name="用事の名前(必須)")
 @app_commands.describe(date= "予定の日時")
@@ -79,13 +84,14 @@ async def command_config(ctx: discord.Interaction):
         app_commands.Choice(name="毎年",value="yearly")
         ]
 )
-async def command_addEvent(ctx: discord.Interaction, name:str, date:str, location:str=None, items:int=None, repeat:str=None, message:str=None):
+async def command_addEvent(ctx: discord.Interaction, name:str, date:str, location:str=None, items:str=None, repeat:str=None, message:str=None):
     user = ctx.user.id
+    
     dt = str2dt(date)
     await rem.add_event(name=name, date_time=dt, location=location, items=items, repeat=repeat, message=message, user=user)
     embed = discord.Embed(title="予定を追加しました！", color=discord.Colour.green())
     embed.add_field(name="予定名", value=f"{name}", inline=False)
-    embed.add_field(name="日時", value=f"{dt.strftime("%Y年%m月%d日 %H時%M分")}", inline=False)
+    embed.add_field(name="日時", value=f"{dt.strftime('%Y年%m月%d日 %H時%M分')}", inline=False)
     if location is not None:
         embed.add_field(name="場所", value=f"{location}", inline=False)
     if items is not None:
@@ -98,7 +104,7 @@ async def command_addEvent(ctx: discord.Interaction, name:str, date:str, locatio
         "yearly":"毎年"
         }
         embed.add_field(name="繰り返し", value=f"{repeatList[repeat]}お知らせします。", inline=False)
-    ctx.channel.send(content=f"<@{user}>\n",embed=embed)
+    ctx.followup.send(content=f"<@{user}>\n",embed=embed)
 
 @tree.command(name="delete_event",description="用事を消します。")
 @app_commands.describe(name="削除したい用事の名前")
@@ -110,7 +116,7 @@ async def command_deleteEvent(ctx: discord.Interaction, name:str=None, date:str=
     embed = discord.Embed(title=f"{len(deleted)}件の予定を削除しました！", color=discord.Colour.red())
     detail = ""
     for e in deleted:
-        detail += f"* {e[name]}({e[date].strftime("%Y年%m月%d日 %H時%M分")})\n"
+        detail += f"* {e['name']}({e['date'].strftime('%Y年%m月%d日 %H時%M分')})\n"
     embed.add_field(name="削除した予定の詳細", value=f"{detail}", inline=False)
     ctx.channel.send(content=f"<@{user}>\n",embed=embed)
 
@@ -145,9 +151,9 @@ async def command_updateEvent(ctx: discord.Interaction, old_name:str, old_date:s
         }
     a = await rem.update_event(old_name=old_name, old_date=str2dt(old_date), new_event_data=new_data)
     if a is not None:
-        embed = discord.Embed(title=f"{old_name}({old_date.strftime("%Y年%m月%d日 %H時%M分")})を変更しました！")
+        embed = discord.Embed(title=f"{old_name}({old_date.strftime('%Y年%m月%d日 %H時%M分')})を変更しました！")
         content = f"**予定名:** {new_name}\n"
-        content += f"**日時:** {str2dt(new_date).strftime("%Y年%m月%d日 %H時%M分")}\n"
+        content += f"**日時:** {str2dt(new_date).strftime('%Y年%m月%d日 %H時%M分')}\n"
         if new_location is not None:
             content += f"**場所:** {new_location}\n"
         if new_items is not None:
@@ -173,14 +179,14 @@ async def command_listEvents(ctx: discord.Interaction,date:str=None):
     user = ctx.user.id
     eventList = await rem.list_events(date=str2dt(date))
     if date is not None:
-        desc = f"# {str2dt(date).strftime("%Y年%m月%d日(%H時%M分)の予定一覧")}\n"
+        desc = f"# {str2dt(date).strftime('%Y年%m月%d日(%H時%M分)の予定一覧')}\n"
         events = ""
         for e in eventList:
-            events += f"{e["name"]}\n"
+            events += f"{e['name']}\n"
     else:
         desc = "# 予定一覧\n"
         for e in eventList:
-            events += f"{e["name"]} ({e["date_time"].strftime("%Y年%m月%d日(%H時%M分)")})\n"
+            events += f"{e['name']} ({e['date_time'].strftime('%Y年%m月%d日(%H時%M分)')})\n"
     ctx.channel.send(content=f"<@{user}>\n{desc}{events}")
 
 @tree.command(name="remind_after",description="指定した期間の後でリマインドします。")
@@ -199,7 +205,7 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
         "d": "days",
         "w": "weeks"
     }
-    await rem.remind_after(name=name,delay_amount=m[0],delay_unit=timeUnit[m[1][0]],location=location,items=items,message=message,user=user)
+    rem.remind_after(name=name,delay_amount=int(m[0]),delay_unit=timeUnit[m[1][0]],location=location,items=items,message=message,user=user)
 
 #@tree.command(name="reportjob",description="進捗を報告します。")
 #async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):

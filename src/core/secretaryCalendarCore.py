@@ -1,10 +1,17 @@
+import asyncio
 import datetime
 import time
 import threading
 from dateutil.relativedelta import relativedelta
-
+import discord
 
 class Reminder:
+    intents = discord.Intents.default()
+    intents.messages = True
+    intents.message_content = True
+    intents.dm_messages = True
+    client = discord.Client(intents=intents)
+    
     def __init__(self):
         """
         登録された予定を辞書形式で管理
@@ -13,10 +20,19 @@ class Reminder:
         }
         """
         self.schedule = {}
+        self.addres = 0
     def _generate_key(self, name, date_time):
         # 各予定を一意に識別するためのキーを生成
         return f"{name}_{int(date_time.timestamp())}"
-
+    async def configAddres(self, type:str, addres:int):
+        print(addres)
+        if type == "ch":
+            self.addres = await self.client.fetch_channel(addres)
+        else:
+            self.addres = await self.client.fetch_user(addres)
+        print(addres)
+    async def sendMessage(self, content):
+        await self.addres.send(content)
     def add_event(self, name:str, date_time:datetime, location:str=None, items:str=None, repeat:str=None, message:str=None, user:int=None):
         """
         新しい予定を追加します。
@@ -139,7 +155,7 @@ class Reminder:
             if e['message']:
                 print(f"  - メッセージ: {e['message']}")
 
-    def _remind(self, event):
+    async def _remind(self, event):
         # リマインドの実行内容（カスタムメッセージ優先）
         text = f"<@{event['user']}>\n**リマインド:** {event['name']}"
         if event['message']:
@@ -150,7 +166,7 @@ class Reminder:
                 text += f"\n**場所:** {event['location']}"
             if event['items']:
                 text += f"**持ち物:** {event['items']}"
-        return text
+        await self.sendMessage(content=text)
 
     def _reschedule(self, key, event):
         # 繰り返し設定がある予定を次回にスケジュール
@@ -178,16 +194,18 @@ class Reminder:
         リマインダーのバックグラウンドループを開始します。
         毎秒予定をチェックして、該当があればリマインドします。
         """
+        def rescheHelper(key, event):
+            if event["repeat"]:
+                self._reschedule(key, event)
+            else:
+                del self.schedule[key]
         def loop():
             while True:
                 now = datetime.datetime.now()
                 for key, event in list(self.schedule.items()):
                     if abs((event["date_time"] - now).total_seconds()) < 1:
-                        self._remind(event)
-                        if event["repeat"]:
-                            self._reschedule(key, event)
-                        else:
-                            del self.schedule[key]
+                        threading.Thread(target=lambda: asyncio.run(self._remind(event)), daemon=True).start()
+                        threading.Thread(target=rescheHelper(key, event), daemon=True).start()
                 time.sleep(1)
 
         threading.Thread(target=loop, daemon=True).start()
@@ -216,4 +234,3 @@ class Reminder:
         delta = datetime.timedelta(**{unit_map[delay_unit]: delay_amount})
         remind_time = datetime.datetime.now() + delta
         self.add_event(name=name, date_time=remind_time, location=location, items=items, message=message,user=user)
-
