@@ -49,9 +49,9 @@ class SelectView(View):
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
         await ctx.response.send_message("送信先を決定しました。")
         if select.values[0] == 'ch':
-            await rem.configAddres(type="ch",addres=ctx.channel_id)
+            await rem.configAddres(typeInput="ch",addres=ctx.channel_id)
         else:
-            await rem.configAddres(type="dm", addres=ctx.user.id)
+            await rem.configAddres(typeInput="dm", addres=ctx.user.id)
 @tree.command(name="test",description="テストコマンドです。")
 @app_commands.describe(
     text="Text to say hello." # 引数名=説明
@@ -86,9 +86,8 @@ async def command_config(ctx: discord.Interaction):
 )
 async def command_addEvent(ctx: discord.Interaction, name:str, date:str, location:str=None, items:str=None, repeat:str=None, message:str=None):
     user = ctx.user.id
-    
     dt = str2dt(date)
-    await rem.add_event(name=name, date_time=dt, location=location, items=items, repeat=repeat, message=message, user=user)
+    rem.add_event(name=name, date_time=dt, location=location, items=items, repeat=repeat, message=message, user=user)
     embed = discord.Embed(title="予定を追加しました！", color=discord.Colour.green())
     embed.add_field(name="予定名", value=f"{name}", inline=False)
     embed.add_field(name="日時", value=f"{dt.strftime('%Y年%m月%d日 %H時%M分')}", inline=False)
@@ -104,7 +103,7 @@ async def command_addEvent(ctx: discord.Interaction, name:str, date:str, locatio
         "yearly":"毎年"
         }
         embed.add_field(name="繰り返し", value=f"{repeatList[repeat]}お知らせします。", inline=False)
-    ctx.followup.send(content=f"<@{user}>\n",embed=embed)
+    await ctx.channel.send(content=f"<@{user}>\n",embed=embed)
 
 @tree.command(name="delete_event",description="用事を消します。")
 @app_commands.describe(name="削除したい用事の名前")

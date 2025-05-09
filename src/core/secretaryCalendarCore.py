@@ -21,16 +21,16 @@ class Reminder:
         """
         self.schedule = {}
         self.addres = 0
+        self.addresType = "dm"
     def _generate_key(self, name, date_time):
         # 各予定を一意に識別するためのキーを生成
         return f"{name}_{int(date_time.timestamp())}"
-    async def configAddres(self, type:str, addres:int):
-        print(addres)
-        if type == "ch":
+    async def configAddres(self, typeInput:str, addres:int):
+        if typeInput == "ch":
             self.addres = await self.client.fetch_channel(addres)
         else:
             self.addres = await self.client.fetch_user(addres)
-        print(addres)
+        self.addresType = typeInput
     async def sendMessage(self, content):
         await self.addres.send(content)
     def add_event(self, name:str, date_time:datetime, location:str=None, items:str=None, repeat:str=None, message:str=None, user:int=None):
@@ -193,22 +193,21 @@ class Reminder:
         """
         リマインダーのバックグラウンドループを開始します。
         毎秒予定をチェックして、該当があればリマインドします。
-        """
-        def rescheHelper(key, event):
-            if event["repeat"]:
-                self._reschedule(key, event)
-            else:
-                del self.schedule[key]
-        def loop():
+        """ 
+        async def checkLoop():
             while True:
                 now = datetime.datetime.now()
                 for key, event in list(self.schedule.items()):
                     if abs((event["date_time"] - now).total_seconds()) < 1:
-                        threading.Thread(target=lambda: asyncio.run(self._remind(event)), daemon=True).start()
-                        threading.Thread(target=rescheHelper(key, event), daemon=True).start()
+                        if event["repeat"]:
+                            self._reschedule(key, event)
+                        else:
+                            del self.schedule[key]
+                        await self._remind(event)
                 time.sleep(1)
-
-        threading.Thread(target=loop, daemon=True).start()
+        loop = asyncio.get_event_loop()
+        loop.call_soon_threadsafe(checkLoop)
+        loop.run_forever()
 
     def remind_after(self, name:str, delay_amount:int, delay_unit:str="seconds", location:str=None, items:str=None, message:str=None,user:int=None):
         """
