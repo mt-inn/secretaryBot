@@ -2,8 +2,11 @@ import random
 
 class React():
     def __init__(self):
+        self.reactCh = ""
         self.praise = []
         self.cheer = []
+    def testWord(self):
+        return "Hello"
     def evaluateJob(self,score):
         if score < 20:
             return "DO MORE, HARDER"
