@@ -27,9 +27,9 @@ class Reminder:
         return f"{name}_{int(date_time.timestamp())}"
     async def configAddres(self, typeInput:str, addres:int):
         if typeInput == "ch":
-            self.addres = await self.client.fetch_channel(addres)
+            self.addres = self.client.get_channel(addres)
         else:
-            self.addres = await self.client.fetch_user(addres)
+            self.addres = self.client.get_user(addres)
         self.addresType = typeInput
     async def sendMessage(self, content):
         await self.addres.send(content)
