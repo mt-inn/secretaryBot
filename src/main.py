@@ -198,10 +198,11 @@ async def command_updateEvent(ctx: discord.Interaction, old_name:str, old_date:s
 @app_commands.describe(date="日付(任意)")
 async def command_listEvents(ctx: discord.Interaction,date:str=None):
     user = ctx.user.id
+    events = ""
     if date is not None:
         eventList = rem.list_events(date=str2dt(date))
         desc = f"# {str2dt(date).strftime('%Y年%m月%d日(%H時%M分)の予定一覧')}\n"
-        events = ""
+
         for e in eventList:
             events += f"{e['name']}\n"
     else:
