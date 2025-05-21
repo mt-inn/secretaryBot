@@ -25,11 +25,11 @@ class Reminder:
     def _generate_key(self, name, date_time):
         # 各予定を一意に識別するためのキーを生成
         return f"{name}_{int(date_time.timestamp())}"
-    async def configAddres(self, typeInput:str, addres:int):
+    async def configAddres(self, addres, typeInput:str):
         if typeInput == "ch":
             self.addres = self.client.get_channel(addres)
         else:
-            self.addres = self.client.get_user(addres)
+            self.addres = addres
         self.addresType = typeInput
     async def sendMessage(self, content):
         await self.addres.send(content)
@@ -193,7 +193,7 @@ class Reminder:
         """
         リマインダーのバックグラウンドループを開始します。
         毎秒予定をチェックして、該当があればリマインドします。
-        """ 
+        """
         async def checkLoop():
             while True:
                 now = datetime.datetime.now()
@@ -204,10 +204,9 @@ class Reminder:
                         else:
                             del self.schedule[key]
                         await self._remind(event)
-                time.sleep(1)
-        loop = asyncio.get_event_loop()
-        loop.call_soon_threadsafe(checkLoop)
-        loop.run_forever()
+                await asyncio.sleep(1)  # ← 非同期で1秒待つ
+    
+        asyncio.create_task(checkLoop())  # ← タスクとして起動
 
     def remind_after(self, name:str, delay_amount:int, delay_unit:str="seconds", location:str=None, items:str=None, message:str=None,user:int=None):
         """

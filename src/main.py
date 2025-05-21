@@ -4,7 +4,6 @@ import os
 import re
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
 from discord.ui import Select, ChannelSelect, View
 import datetime
 from dotenv import load_dotenv
@@ -33,22 +32,24 @@ def str2dt(text:str):
     for e in re.split(r"\D", text):
         if e != "":
             l.append(int(e))
-    dt = datetime.datetime(*l)
+    dt = datetime.datetime(*l, microsecond=0)
     return dt
 
 class selectRemindView(View):
     @discord.ui.select(
         cls=Select,
         placeholder="",
-        options=[discord.SelectOption(label="このチャンネル",value='ch',description="このチャンネルでリマインド"),discord.SelectOption(label="DM",value='dm',description="DMでリマインド"
-    )]
+        options=[
+            discord.SelectOption(label="このチャンネル",value='ch',description="このチャンネルでリマインド"),
+            discord.SelectOption(label="DM",value='dm',description="DMでリマインド")
+            ]
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
         await ctx.response.send_message("送信先を決定しました。", ephemeral=True)
         if select.values[0] == 'ch':
             await rem.configAddres(typeInput="ch",addres=ctx.channel_id)
         else:
-            await rem.configAddres(typeInput="dm", addres=ctx.user.id)
+            await rem.configAddres(typeInput="dm", addres=ctx.user)
 class selectTalkView(View):
     @discord.ui.select(
         cls=ChannelSelect
@@ -63,6 +64,12 @@ class selectTalkView(View):
 async def test_command(ctx: discord.Interaction, text:str):
     channel = client.get_channel(src.React.reactCh)
     await channel.send(f"てすと！\nprovided word: {text}")#ephemeral=True→「これらはあなただけに表示されています」
+    return
+@tree.command(name="t", description="圧縮して設定を更新")
+async def t(ctx: discord.Interaction):
+    await rem.configAddres(typeInput="ch",addres=ctx.channel_id)
+    rem.add_event(name="test", date_time=str2dt("2026/01/01"))
+    await ctx.response.send_message("このチャンネルにてテストします。\nテスト用イベントの詳細: test,2026/01/01", ephemeral=True)
     return
 @tree.command(name="displayconfig",description="設定を見せる")
 async def command_displayconfig(ctx: discord.Interaction):
@@ -121,12 +128,13 @@ async def command_addEvent(ctx: discord.Interaction, name:str, date:str, locatio
 @app_commands.describe(date="予定を開けたい日時")
 async def command_deleteEvent(ctx: discord.Interaction, name:str=None, date:str=None):
     user = ctx.user.id
+    name = dt = None
     if date is not None: dt = str2dt(date)
-    deleted = await rem.delete_event(name, dt)
+    deleted = rem.delete_event(name, dt)
     embed = discord.Embed(title=f"{len(deleted)}件の予定を削除しました！", color=discord.Colour.red())
     detail = ""
     for e in deleted:
-        detail += f"* {e['name']}({e['date'].strftime('%Y年%m月%d日 %H時%M分')})\n"
+        detail += f"* {e['name']}({e['date_time'].strftime('%Y年%m月%d日 %H時%M分')})\n"
     embed.add_field(name="削除した予定の詳細", value=f"{detail}", inline=False)
     await ctx.response.send_message(content=f"<@{user}>\n",embed=embed,ephemeral=True)
     return
@@ -151,6 +159,7 @@ async def command_deleteEvent(ctx: discord.Interaction, name:str=None, date:str=
 )
 async def command_updateEvent(ctx: discord.Interaction, old_name:str, old_date:str,new_name:str, new_date:str, new_location:str=None, new_items:int=None, new_repeat:str=None, new_message:str=None):
     user = ctx.user.id
+    old_date = str2dt(old_date)
     new_data = {
             "name": new_name,
             "date_time": str2dt(new_date),
@@ -160,7 +169,7 @@ async def command_updateEvent(ctx: discord.Interaction, old_name:str, old_date:s
             "message": new_message,
             "user": user
         }
-    a = await rem.update_event(old_name=old_name, old_date=str2dt(old_date), new_event_data=new_data)
+    a = rem.update_event(old_name=old_name, old_date=old_date, new_event_data=new_data)
     if a is not None:
         embed = discord.Embed(title=f"{old_name}({old_date.strftime('%Y年%m月%d日 %H時%M分')})を変更しました！")
         content = f"**予定名:** {new_name}\n"
@@ -189,14 +198,15 @@ async def command_updateEvent(ctx: discord.Interaction, old_name:str, old_date:s
 @app_commands.describe(date="日付(任意)")
 async def command_listEvents(ctx: discord.Interaction,date:str=None):
     user = ctx.user.id
-    eventList = await rem.list_events(date=str2dt(date))
     if date is not None:
+        eventList = rem.list_events(date=str2dt(date))
         desc = f"# {str2dt(date).strftime('%Y年%m月%d日(%H時%M分)の予定一覧')}\n"
         events = ""
         for e in eventList:
             events += f"{e['name']}\n"
     else:
         desc = "# 予定一覧\n"
+        eventList = rem.list_events()
         for e in eventList:
             events += f"{e['name']} ({e['date_time'].strftime('%Y年%m月%d日(%H時%M分)')})\n"
     await ctx.response.send_message(content=f"<@{user}>\n{desc}{events}",ephemeral=True)
@@ -218,6 +228,14 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
         "d": "days",
         "w": "weeks"
     }
+    timeUnit2 = {
+        "s": "秒",
+        "m": "分",
+        "h": "時間",
+        "d": "日",
+        "w": "週"
+    }
+    await ctx.response.send_message(f"{m[0]}{timeUnit2[m[1][0]]}後にリマインドします！", ephemeral=True)
     rem.remind_after(name=name,delay_amount=int(m[0]),delay_unit=timeUnit[m[1][0]],location=location,items=items,message=message,user=user)
 
 #@tree.command(name="reportjob",description="進捗を報告します。")
@@ -228,6 +246,6 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
 async def on_ready():
     print("起動完了")
     await tree.sync()#スラッシュコマンドを同期
-    # rem.start_reminder_loop()
+    rem.start_reminder_loop()
 
 client.run(TOKEN)
