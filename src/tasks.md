@@ -10,7 +10,7 @@
 リマインドの送信先を設定する
 
 --DMに送信できない--
-- [　] configtalk
+- [x] configtalk
 書き込みに反応する場所を設定する
 
 - [x] add_event

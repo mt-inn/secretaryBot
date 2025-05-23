@@ -56,7 +56,7 @@ class selectTalkView(View):
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
         src.React.reactCh = (select.values[0]).id
-        await ctx.response.send_message("送信先を決定しました。", ephemeral=True)
+        await ctx.response.send_message(f"送信先を{select.values[0]}に決定しました。", ephemeral=True)
 @tree.command(name="test",description="テストコマンドです。")
 @app_commands.describe(
     text="Text to say hello." # 引数名=説明
@@ -84,7 +84,7 @@ async def command_configremind(ctx: discord.Interaction):
 @tree.command(name="configtalk", description="会話の場所を設定をします。")
 async def command_configtalk(ctx: discord.Interaction):
     view = selectTalkView()
-    await ctx.response.send_message("リマインドの送信場所を設定", view=view, ephemeral=True)
+    await ctx.response.send_message("リマインドの送信場所を設定:", view=view, ephemeral=True)
     return
 @tree.command(name="add_event",description="用事を登録します。")
 @app_commands.describe(name="用事の名前(必須)")
@@ -238,10 +238,10 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
     }
     await ctx.response.send_message(f"{m[0]}{timeUnit2[m[1][0]]}後にリマインドします！", ephemeral=True)
     rem.remind_after(name=name,delay_amount=int(m[0]),delay_unit=timeUnit[m[1][0]],location=location,items=items,message=message,user=user)
-
-#@tree.command(name="reportjob",description="進捗を報告します。")
-#async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):
-#    await src.React()
+#ここから会話関係
+@tree.command(name="reportjob",description="進捗を報告します。")
+async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):
+    await src.React()
 #コマンドここまで
 @client.event
 async def on_ready():
