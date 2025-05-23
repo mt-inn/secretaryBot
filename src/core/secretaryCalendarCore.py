@@ -113,7 +113,7 @@ class Reminder:
                 return True
         return False
 
-    def list_events(self, date:datetime=None):
+    def list_events(self, inputDate:datetime=None):
         """
         予定一覧をリストとして取得します。
 
@@ -125,7 +125,8 @@ class Reminder:
         """
         result = []
         for event in sorted(self.schedule.values(), key=lambda e: e["date_time"]):
-            if date is None or event["date_time"] == date:
+            print(f"{event["date_time"]}, {inputDate.date}")
+            if inputDate is None or event["date_time"].date() == inputDate.date():
                 result.append(event)
         return result
 
@@ -204,7 +205,7 @@ class Reminder:
                         else:
                             del self.schedule[key]
                         await self._remind(event)
-                await asyncio.sleep(1)  # ← 非同期で1秒待つ
+                await asyncio.sleep(1)
     
         asyncio.create_task(checkLoop())  # ← タスクとして起動
 
