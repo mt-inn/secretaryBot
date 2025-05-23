@@ -126,7 +126,7 @@ class Reminder:
         result = []
         for event in sorted(self.schedule.values(), key=lambda e: e["date_time"]):
             print(f"{event["date_time"]}, {inputDate.date}")
-            if inputDate is None or event["date_time"].date() == inputDate.date():
+            if inputDate is None or event["date_time"].date() == inputDate.date.date():
                 result.append(event)
         return result
 
