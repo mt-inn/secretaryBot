@@ -7,13 +7,14 @@ from discord import app_commands
 from discord.ui import Select, ChannelSelect, View
 import datetime
 from dotenv import load_dotenv
-from core import secretaryCalendarCore as scc
-from core import secretaryReactCore as src
+from core import secretaryCalendarCore
+from core import secretaryReactCore
 
 load_dotenv()
 TOKEN=os.getenv("DISCORD_TOKEN")
 
-rem = scc.Reminder()
+rem = secretaryCalendarCore.Reminder()
+react = secretaryReactCore.React()
 client = rem.client
 tree = app_commands.CommandTree(client)
 
@@ -55,14 +56,14 @@ class selectTalkView(View):
         cls=ChannelSelect
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
-        src.React.reactCh = (select.values[0]).id
+        react.reactCh = (select.values[0]).id
         await ctx.response.send_message(f"送信先を{select.values[0]}に決定しました。", ephemeral=True)
 @tree.command(name="test",description="テストコマンドです。")
 @app_commands.describe(
     text="Text to say hello." # 引数名=説明
 )
 async def test_command(ctx: discord.Interaction, text:str):
-    channel = client.get_channel(src.React.reactCh)
+    channel = client.get_channel(react.reactCh)
     await channel.send(f"てすと！\nprovided word: {text}")#ephemeral=True→「これらはあなただけに表示されています」
     return
 @tree.command(name="t", description="圧縮して設定を更新")
@@ -238,10 +239,32 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
     }
     await ctx.response.send_message(f"{m[0]}{timeUnit2[m[1][0]]}後にリマインドします！", ephemeral=True)
     rem.remind_after(name=name,delay_amount=int(m[0]),delay_unit=timeUnit[m[1][0]],location=location,items=items,message=message,user=user)
+
 #ここから会話関係
-@tree.command(name="reportjob",description="進捗を報告します。")
-async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):
-    await src.React()
+#書き込みに反応して、その内容から反応する。
+#リアクションを書き込みじゃなくて絵文字にしてもいいかな？いやめんどいな
+@client.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    else:
+        reactionLists = [
+            ["終わった", "done"],
+            ["終わり", "done"],
+            ["どね", "done"],
+            ["done", "done"],
+            ["疲れた", "tired"],
+            ["褒めて", "homete"]
+            ]
+        text = message.content
+        for e in reactionLists:
+            if e[0] in text:
+                reaction = react.reactionText(e[1])
+                await message.channel.send(reaction)
+        return
+#@tree.command(name="reportjob",description="進捗を報告します。")
+#async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):
+#    await react.React()
 #コマンドここまで
 @client.event
 async def on_ready():

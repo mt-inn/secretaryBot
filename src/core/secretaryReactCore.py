@@ -21,6 +21,17 @@ class React():
     def randomList(self,list):
         n = random.randint(0, len(list))
         return list[n]
+    
+    def reactionText(self, word):
+        """
+        求められる答えに応じて返信するテキストをランダム選出
+        """
+        reaction = {
+            "done": ["お疲れ様です！"],
+            "tired": ["よく頑張りましたね！"],
+            "homete": ["死ぬほどえらいです！"]
+        }
+        return random.choice(reaction[word])
     def cheerUp(self):
         """
         なんか応援するような内容
