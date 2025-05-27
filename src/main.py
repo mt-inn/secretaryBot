@@ -1,21 +1,18 @@
 # Botとして動かすためのいろいろ。
 # 起動とかコマンドとか。
-import os
 import re
 import discord
 from discord import app_commands
 from discord.ui import Select, ChannelSelect, View
 import datetime
-from dotenv import load_dotenv
+from core import config
 from core import secretaryCalendarCore
 from core import secretaryReactCore
 
-load_dotenv()
-TOKEN=os.getenv("DISCORD_TOKEN")
 
 rem = secretaryCalendarCore.Reminder()
 react = secretaryReactCore.React()
-client = rem.client
+client = config.client
 tree = app_commands.CommandTree(client)
 
 def str2dt(text:str):
@@ -262,4 +259,4 @@ async def on_ready():
     await tree.sync()#スラッシュコマンドを同期
     rem.start_reminder_loop()
 
-client.run(TOKEN)
+client.run(config.TOKEN)

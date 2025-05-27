@@ -1,17 +1,11 @@
 import asyncio
 import datetime
-import time
-import threading
 from dateutil.relativedelta import relativedelta
-import discord
+from core import config
 
 class Reminder:
-    intents = discord.Intents.default()
-    intents.messages = True
-    intents.message_content = True
-    intents.dm_messages = True
-    client = discord.Client(intents=intents)
-    
+    client = config.client
+
     def __init__(self):
         """
         登録された予定を辞書形式で管理
@@ -22,6 +16,7 @@ class Reminder:
         self.schedule = {}
         self.addres = 0
         self.addresType = "dm"
+    
     def _generate_key(self, name, date_time):
         # 各予定を一意に識別するためのキーを生成
         return f"{name}_{int(date_time.timestamp())}"
@@ -31,8 +26,11 @@ class Reminder:
         else:
             self.addres = addres
         self.addresType = typeInput
+        return
+    
     async def sendMessage(self, content):
         await self.addres.send(content)
+        return
     def add_event(self, name:str, date_time:datetime, location:str=None, items:str=None, repeat:str=None, message:str=None, user:int=None):
         """
         新しい予定を追加します。
@@ -60,6 +58,7 @@ class Reminder:
             "message": message,
             "user": user
         }
+        return
 
     def delete_event(self, name:str=None, date:datetime=None):
         """
@@ -155,6 +154,7 @@ class Reminder:
                 print(f"  - 繰り返し: {e['repeat']}")
             if e['message']:
                 print(f"  - メッセージ: {e['message']}")
+        return
 
     async def _remind(self, event):
         # リマインドの実行内容（カスタムメッセージ優先）
@@ -168,6 +168,7 @@ class Reminder:
             if event['items']:
                 text += f"**持ち物:** {event['items']}"
         await self.sendMessage(content=text)
+        return
 
     def _reschedule(self, key, event):
         # 繰り返し設定がある予定を次回にスケジュール
@@ -189,6 +190,7 @@ class Reminder:
         event["date_time"] = new_dt
         self.schedule[new_key] = event
         del self.schedule[key]
+        return
 
     def start_reminder_loop(self):
         """
