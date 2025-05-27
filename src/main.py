@@ -205,7 +205,7 @@ async def command_listEvents(ctx: discord.Interaction,date:str=None):
             events += f"{e['name']}\n"
     else:
         desc = "# 予定一覧\n"
-        eventList = rem.list_events()
+        eventList = rem.list_events(inputDate=None)
         for e in eventList:
             events += f"{e['name']} ({e['date_time'].strftime('%Y年%m月%d日(%H時%M分)')})\n"
     await ctx.response.send_message(content=f"<@{user}>\n{desc}{events}",ephemeral=True)
@@ -245,9 +245,9 @@ async def on_message(message):
     if (message.author.bot) and (message.channel == react.reactCh or message.channel is None):
         return
     else:
-        text = message.content
-        reaction = react.reactionText(text)
-        await message.channel.send(reaction)
+        text = react.reactionText(message.content)
+        if text is not None: 
+            await message.channel.send(text)
         return
 #@tree.command(name="reportjob",description="進捗を報告します。")
 #async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):
