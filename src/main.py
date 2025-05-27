@@ -245,22 +245,12 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
 #リアクションを書き込みじゃなくて絵文字にしてもいいかな？いやめんどいな
 @client.event
 async def on_message(message):
-    if message.author.bot:
+    if (message.author.bot) and (message.channel == react.reactCh or message.channel is None):
         return
     else:
-        reactionLists = [
-            ["終わった", "done"],
-            ["終わり", "done"],
-            ["どね", "done"],
-            ["done", "done"],
-            ["疲れた", "tired"],
-            ["褒めて", "homete"]
-            ]
         text = message.content
-        for e in reactionLists:
-            if e[0] in text:
-                reaction = react.reactionText(e[1])
-                await message.channel.send(reaction)
+        reaction = react.reactionText(text)
+        await message.channel.send(reaction)
         return
 #@tree.command(name="reportjob",description="進捗を報告します。")
 #async def command_reportJob(ctx: discord.Interaction, jobSumary:str, selfEvaluation:str):
