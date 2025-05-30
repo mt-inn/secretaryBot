@@ -1,0 +1,7 @@
+asyncio
+datetime
+dateutil
+discord
+dotenv
+os
+re

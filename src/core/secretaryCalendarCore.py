@@ -3,7 +3,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 from core import config
 
-class Reminder:
+class Reminder():
     client = config.client
 
     def __init__(self):

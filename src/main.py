@@ -6,12 +6,12 @@ from discord import app_commands
 from discord.ui import Select, ChannelSelect, View
 import datetime
 from core import config
-from core import secretaryCalendarCore
-from core import secretaryReactCore
+from core import secretaryCalendarCore,secretaryReactCore,secretaryFeedCore
 
 
 rem = secretaryCalendarCore.Reminder()
 react = secretaryReactCore.React()
+feed = secretaryFeedCore.RSS()
 client = config.client
 tree = app_commands.CommandTree(client)
 
@@ -48,19 +48,28 @@ class selectRemindView(View):
             await rem.configAddres(typeInput="ch",addres=ctx.channel_id)
         else:
             await rem.configAddres(typeInput="dm", addres=ctx.user)
+        return
 class selectTalkView(View):
     @discord.ui.select(
         cls=ChannelSelect
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
-        react.reactCh = (select.values[0]).id
+        react.reactCh = select.values[0].id
         await ctx.response.send_message(f"送信先を{select.values[0]}に決定しました。", ephemeral=True)
+        return
+class selectFeedView(View):
+    @discord.ui.select(
+        cls=ChannelSelect
+    )
+    async def selectMenu(self, ctx: discord.Interaction, select: Select):
+        feed.configChannel((select.values[0]).id)
+        await ctx.response.send_message(f"RSSフィードを{select.values[0]}に送信します。", ephemeral=True)
 @tree.command(name="test",description="テストコマンドです。")
 @app_commands.describe(
     text="Text to say hello." # 引数名=説明
 )
 async def test_command(ctx: discord.Interaction, text:str):
-    channel = client.get_channel(react.reactCh)
+    channel = feed.feedCh
     await channel.send(f"てすと！\nprovided word: {text}")#ephemeral=True→「これらはあなただけに表示されています」
     return
 @tree.command(name="t", description="圧縮して設定を更新")
@@ -82,7 +91,12 @@ async def command_configremind(ctx: discord.Interaction):
 @tree.command(name="configtalk", description="会話の場所を設定をします。")
 async def command_configtalk(ctx: discord.Interaction):
     view = selectTalkView()
-    await ctx.response.send_message("リマインドの送信場所を設定:", view=view, ephemeral=True)
+    await ctx.response.send_message("会話に参加する場所を設定:", view=view, ephemeral=True)
+    return
+@tree.command(name="configrss", description="RSSフィードの送信先を設定します")
+async def command_configrss(ctx:discord.Integration):
+    view = selectFeedView()
+    await ctx.response.send_message("RSSフィードの送信先を設定:", view=view, ephemeral=True)
     return
 @tree.command(name="add_event",description="用事を登録します。")
 @app_commands.describe(name="用事の名前(必須)")
@@ -225,14 +239,24 @@ async def command_remindAfter(ctx: discord.Interaction, name:str, delay:str, loc
         "m": "minutes",
         "h": "hours",
         "d": "days",
-        "w": "weeks"
+        "w": "weeks",
+        "秒": "seconds",
+        "分": "minutes",
+        "時": "hours",
+        "日": "days",
+        "週": "weeks"
     }
     timeUnit2 = {
         "s": "秒",
         "m": "分",
         "h": "時間",
         "d": "日",
-        "w": "週"
+        "w": "週",
+        "秒": "秒",
+        "分": "分",
+        "時": "時間",
+        "日": "日",
+        "週": "週"
     }
     await ctx.response.send_message(f"{m[0]}{timeUnit2[m[1][0]]}後にリマインドします！", ephemeral=True)
     rem.remind_after(name=name,delay_amount=int(m[0]),delay_unit=timeUnit[m[1][0]],location=location,items=items,message=message,user=user)
