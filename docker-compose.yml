@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   discord-bot:
     build:
@@ -12,20 +10,7 @@ services:
     env_file:
       - src/.env
     volumes:
-      # ログファイルを永続化する場合
       - ./logs:/app/logs
-      # 設定ファイルをホストから読み込む場合
       - ./src/core:/app/core
     networks:
       - discord-bot-network
-    # デバッグ用にポートを開放する場合（オプション）
-    # ports:
-    #   - "8000:8000"
-
-networks:
-  discord-bot-network:
-    driver: bridge
-
-# 必要に応じてボリュームを定義
-volumes:
-  bot-logs:
