@@ -45,6 +45,7 @@ class selectRemindView(View):
         await ctx.response.send_message("送信先を決定しました。", ephemeral=True)
         if select.values[0] == 'ch':
             await rem.configAddres(typeInput="ch",addres=ctx.channel_id)
+            await config.backupConfig(data=ctx.channel_id, category="")
         else:
             await rem.configAddres(typeInput="dm", addres=ctx.user)
         return

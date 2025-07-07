@@ -1,4 +1,5 @@
 import random
+from core import config
 
 class React():
     def __init__(self):
